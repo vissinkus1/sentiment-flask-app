@@ -3,13 +3,14 @@ from textblob import TextBlob
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 from transformers import pipeline
 import pandas as pd
+import os
 
 # Create Flask app with templates and static folder support
 app = Flask(__name__, template_folder='templates', static_folder='static')
 
-# Initialize sentiment models
+# Initialize sentiment models once at startup
 vader = SentimentIntensityAnalyzer()
-bert_pipeline = pipeline("sentiment-analysis", model="distilbert-base-uncased-finetuned-sst-2-english")
+bert_pipeline = pipeline("sentiment-analysis", model="distilbert-base-uncased-finetuned-sst-2-english")  # Lightweight and Render-friendly
 
 def analyze_sentiment(text, model):
     if model == "textblob":
@@ -29,13 +30,16 @@ def analyze_sentiment(text, model):
         else:
             return "neutral"
     elif model == "bert":
-        label = bert_pipeline(text[:512])[0]['label'].lower()
-        return label
+        prediction = bert_pipeline(text[:512])[0]
+        label = prediction['label'].lower()
+        # Map BERT output labels to standard ones
+        if label in ["positive", "negative"]:
+            return label
+        return "neutral"
     else:
         return "unsupported_model"
 
 # --------- API Endpoints for scripts/programs ---------
-
 @app.route('/predict', methods=['POST'])
 def predict():
     data = request.get_json()
@@ -59,7 +63,6 @@ def batch_predict():
         return jsonify({"error": str(e)}), 400
 
 # --------- UI Endpoints for frontend AJAX ---------
-
 @app.route('/')
 def index():
     return render_template('index.html')  # Your frontend HTML page
@@ -86,11 +89,9 @@ def batch_predict_ui():
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
-# Run the Flask app
+# Run the Flask app (proper port binding for Render etc.)
 if __name__ == '__main__':
-    import os
     print("Starting Flask server...")
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=False)
-
 
