@@ -10,7 +10,8 @@ app = Flask(__name__, template_folder='templates', static_folder='static')
 
 # Initialize sentiment models once at startup
 vader = SentimentIntensityAnalyzer()
-bert_pipeline = pipeline("sentiment-analysis", model="distilbert-base-uncased-finetuned-sst-2-english")  # Lightweight and Render-friendly
+bert_pipeline = pipeline("sentiment-analysis", model="distilbert-base-uncased")
+  # Lightweight and Render-friendly
 
 def analyze_sentiment(text, model):
     if model == "textblob":
