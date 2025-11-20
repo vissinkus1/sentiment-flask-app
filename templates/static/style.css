@@ -1,0 +1,13 @@
+body {
+    background: linear-gradient(135deg, #e9eafc 0%, #f6f8fa 100%);
+}
+.card-header {
+    font-weight: bold;
+    letter-spacing: 1px;
+}
+table th, table td {
+    text-align: center;
+}
+.bg-gradient-primary {
+    background: linear-gradient(90deg, #2680eb 0%, #6ee2f5 100%);
+}

@@ -1,0 +1,6 @@
+flask==2.3.0
+textblob==0.17.1
+vaderSentiment==3.3.2
+transformers==4.35.0
+pandas==2.1.0
+torch==2.1.0
