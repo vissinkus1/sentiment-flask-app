@@ -4,12 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sentiment Studio</title>
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet">
 </head>
+
 <body>
     <div class="bg-orb orb-a" aria-hidden="true"></div>
     <div class="bg-orb orb-b" aria-hidden="true"></div>
@@ -19,20 +21,22 @@
             <p class="eyebrow mb-2">NLP Sentiment Toolkit</p>
             <h1 class="hero-title mb-3">Sentiment Studio</h1>
             <p class="hero-copy mb-0">
-                Analyze single text or full CSV datasets with BERT, VADER, and TextBlob from one dashboard.
+                Analyze single text or CSV datasets using BERT, VADER, and TextBlob.
             </p>
         </section>
 
         <div class="row g-4">
+            <!-- SINGLE TEXT -->
             <section class="col-lg-6">
                 <div class="panel h-100">
                     <div class="panel-header mb-3">
                         <h2 class="panel-title">Single Text Analysis</h2>
-                        <p class="panel-subtitle mb-0">Paste a sentence and get a prediction instantly.</p>
+                        <p class="panel-subtitle mb-0">Analyze a sentence instantly.</p>
                     </div>
 
                     <label for="singleText" class="input-label">Input Text</label>
-                    <textarea id="singleText" class="text-input" rows="5" placeholder="Example: I really enjoyed this product and support team."></textarea>
+                    <textarea id="singleText" class="text-input" rows="5"
+                        placeholder="Example: I really enjoyed this product."></textarea>
 
                     <div class="row g-3 mt-1">
                         <div class="col-sm-7">
@@ -44,19 +48,26 @@
                             </select>
                         </div>
                         <div class="col-sm-5 d-grid align-self-end">
-                            <button class="btn-action" type="button" onclick="analyzeSingle()">Analyze Text</button>
+                            <button class="btn-action" type="button" onclick="analyzeSingle()">
+                                Analyze Text
+                            </button>
                         </div>
                     </div>
+
+                    <p class="hint mt-2 mb-0">
+                        Note: First BERT request may take 10–15 seconds on cloud servers.
+                    </p>
 
                     <div id="singleResult" class="result-zone mt-3"></div>
                 </div>
             </section>
 
+            <!-- BATCH CSV -->
             <section class="col-lg-6">
                 <div class="panel h-100">
                     <div class="panel-header mb-3">
                         <h2 class="panel-title">Batch CSV Analysis</h2>
-                        <p class="panel-subtitle mb-0">Upload a CSV with a required <code>text</code> column.</p>
+                        <p class="panel-subtitle mb-0">CSV must contain a <code>text</code> column.</p>
                     </div>
 
                     <form id="batchForm" onsubmit="analyzeBatch(event)">
@@ -78,332 +89,116 @@
                         </div>
                     </form>
 
-                    <p class="hint mt-3 mb-0">Tip: keep text rows under 512 tokens for best transformer performance.</p>
+                    <p class="hint mt-3 mb-0">
+                        Tip: On free tier, BERT is limited to small CSV files.
+                    </p>
+
                     <div id="batchResult" class="result-zone mt-3"></div>
                 </div>
             </section>
         </div>
-
-        <section class="panel about-panel mt-4">
-            <h2 class="panel-title mb-3">Model Notes</h2>
-            <div class="about-grid">
-                <article>
-                    <h3>BERT</h3>
-                    <p>Transformer model with strongest contextual understanding and best overall accuracy.</p>
-                </article>
-                <article>
-                    <h3>VADER</h3>
-                    <p>Rule-based and fast for social and short-form text with punctuation and emphasis.</p>
-                </article>
-                <article>
-                    <h3>TextBlob</h3>
-                    <p>Lightweight baseline for quick checks and low-resource environments.</p>
-                </article>
-            </div>
-        </section>
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+
     <script>
-        let batchChart = null;
-        let latestBatchRows = [];
-
-        function escapeHtml(value) {
-            return String(value)
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#039;');
+        function escapeHtml(v) {
+            return String(v).replace(/&/g, "&amp;")
+                            .replace(/</g, "&lt;")
+                            .replace(/>/g, "&gt;");
         }
 
-        function normalizeSentiment(value) {
-            const normalized = String(value || '').toLowerCase();
-            if (normalized.includes('pos')) return 'positive';
-            if (normalized.includes('neg')) return 'negative';
-            if (normalized.includes('neu')) return 'neutral';
-            return 'neutral';
+        function showStatus(id, msg, type) {
+            document.getElementById(id).innerHTML =
+                `<div class="result-box ${type}">${escapeHtml(msg)}</div>`;
         }
 
-        function sentimentClass(sentiment) {
-            if (sentiment === 'positive') return 'sentiment-positive';
-            if (sentiment === 'negative') return 'sentiment-negative';
-            return 'sentiment-neutral';
+        function normalizeSentiment(v) {
+            v = String(v).toLowerCase();
+            if (v.includes("pos")) return "positive";
+            if (v.includes("neg")) return "negative";
+            return "neutral";
         }
 
-        function clampConfidence(value) {
-            const numeric = Number(value);
-            if (Number.isNaN(numeric)) return 0;
-            return Math.max(0, Math.min(1, numeric));
+        function sentimentClass(s) {
+            return s === "positive" ? "sentiment-positive" :
+                   s === "negative" ? "sentiment-negative" :
+                   "sentiment-neutral";
         }
 
-        function formatConfidence(value) {
-            return (clampConfidence(value) * 100).toFixed(1);
+        function formatConfidence(v) {
+            return (Math.max(0, Math.min(1, Number(v))) * 100).toFixed(1);
         }
 
-        function showStatus(targetId, message, type) {
-            const target = document.getElementById(targetId);
-            target.innerHTML = `<div class="result-box ${type}">${escapeHtml(message)}</div>`;
-        }
-
-        function renderSingleResult(result) {
-            const sentiment = normalizeSentiment(result.sentiment || result.label);
-            const confidencePct = formatConfidence(result.confidence ?? result.score);
-            const target = document.getElementById('singleResult');
-            target.innerHTML = `
+        function renderSingleResult(r) {
+            const s = normalizeSentiment(r.sentiment);
+            const c = formatConfidence(r.confidence);
+            document.getElementById("singleResult").innerHTML = `
                 <div class="result-box">
-                    <p class="mb-2"><strong>Model:</strong> ${escapeHtml(result.model)}</p>
-                    <p class="mb-2"><strong>Sentiment:</strong>
-                        <span class="sentiment-pill ${sentimentClass(sentiment)}">${sentiment.toUpperCase()}</span>
+                    <p><strong>Model:</strong> ${escapeHtml(r.model)}</p>
+                    <p><strong>Sentiment:</strong>
+                        <span class="sentiment-pill ${sentimentClass(s)}">${s.toUpperCase()}</span>
                     </p>
-                    <p class="mb-1 single-meta"><strong>Confidence:</strong> ${confidencePct}%</p>
-                    <div class="confidence-meter" aria-hidden="true">
-                        <span class="confidence-fill" style="width:${confidencePct}%"></span>
-                    </div>
-                </div>
-            `;
+                    <p><strong>Confidence:</strong> ${c}%</p>
+                </div>`;
         }
 
         async function analyzeSingle() {
-            const text = document.getElementById('singleText').value.trim();
-            const model = document.getElementById('singleModel').value;
+            const text = document.getElementById("singleText").value.trim();
+            const model = document.getElementById("singleModel").value;
 
             if (!text) {
-                showStatus('singleResult', 'Please enter text before analyzing.', 'is-error');
+                showStatus("singleResult", "Please enter text.", "is-error");
                 return;
             }
 
-            showStatus('singleResult', 'Analyzing text...', 'is-loading');
+            showStatus("singleResult", "Analyzing...", "is-loading");
 
-            try {
-                const response = await fetch('/predict_ui', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ text, model })
-                });
-
-                const payload = await response.json();
-                if (!response.ok || payload.error) {
-                    throw new Error(payload.error || 'Unable to analyze text right now.');
-                }
-
-                renderSingleResult(payload);
-            } catch (error) {
-                showStatus('singleResult', error.message, 'is-error');
-            }
-        }
-
-        function buildBatchSummary(rows) {
-            const counts = { positive: 0, negative: 0, neutral: 0 };
-            let totalConfidence = 0;
-
-            rows.forEach((row) => {
-                const sentiment = normalizeSentiment(row.sentiment);
-                counts[sentiment] += 1;
-                totalConfidence += clampConfidence(row.confidence);
+            const res = await fetch("/predict_ui", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ text, model })
             });
 
-            const safeTotal = rows.length || 1;
-            const positivePct = ((counts.positive / safeTotal) * 100).toFixed(1);
-            const negativePct = ((counts.negative / safeTotal) * 100).toFixed(1);
-            const neutralPct = ((counts.neutral / safeTotal) * 100).toFixed(1);
-            const avgConfidencePct = ((totalConfidence / safeTotal) * 100).toFixed(1);
+            const data = await res.json();
 
-            return { counts, total: rows.length, positivePct, negativePct, neutralPct, avgConfidencePct };
-        }
-
-        function renderBatchChart(summary) {
-            const chartCanvas = document.getElementById('batchChartCanvas');
-            if (!chartCanvas || typeof Chart === 'undefined') return;
-
-            if (batchChart) {
-                batchChart.destroy();
-            }
-
-            batchChart = new Chart(chartCanvas, {
-                type: 'bar',
-                data: {
-                    labels: ['Positive', 'Negative', 'Neutral'],
-                    datasets: [{
-                        data: [summary.counts.positive, summary.counts.negative, summary.counts.neutral],
-                        backgroundColor: ['rgba(31, 157, 85, 0.6)', 'rgba(207, 63, 63, 0.6)', 'rgba(176, 122, 0, 0.6)'],
-                        borderColor: ['#1f9d55', '#cf3f3f', '#b07a00'],
-                        borderWidth: 1.4,
-                        borderRadius: 8
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: { precision: 0 }
-                        }
-                    },
-                    plugins: {
-                        legend: { display: false }
-                    }
-                }
-            });
-        }
-
-        function convertRowsToCsv(rows) {
-            const headers = ['text', 'label', 'score'];
-            const lines = [headers.join(',')];
-
-            rows.forEach((row) => {
-                const text = `"${String(row.text).replace(/"/g, '""')}"`;
-                const label = `"${String(row.sentiment || row.label).replace(/"/g, '""')}"`;
-                const score = clampConfidence(row.confidence ?? row.score).toFixed(4);
-                lines.push([text, label, score].join(','));
-            });
-
-            return lines.join('\n');
-        }
-
-        function downloadBatchCsv() {
-            if (!latestBatchRows.length) {
-                showStatus('batchResult', 'Analyze a CSV first, then download results.', 'is-error');
+            if (!res.ok || data.sentiment === "unsupported_model") {
+                showStatus("singleResult",
+                    "BERT unavailable. Please use VADER or TextBlob.", "is-error");
                 return;
             }
 
-            const csvData = convertRowsToCsv(latestBatchRows);
-            const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
-            const url = URL.createObjectURL(blob);
-
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = 'analyzed_results.csv';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
+            renderSingleResult(data);
         }
 
-        function renderBatchResults(rows) {
-            const cleanRows = rows.map((row) => ({
-                text: String(row.text || ''),
-                sentiment: normalizeSentiment(row.sentiment || row.label),
-                confidence: clampConfidence(row.confidence ?? row.score)
-            }));
+        async function analyzeBatch(e) {
+            e.preventDefault();
 
-            if (!cleanRows.length) {
-                showStatus('batchResult', 'No rows found in CSV.', 'is-error');
+            const file = document.getElementById("csvFile").files[0];
+            const model = document.getElementById("batchModel").value;
+
+            if (model === "bert" && file.size > 1024 * 1024) {
+                showStatus("batchResult",
+                    "BERT batch is limited on free tier. Use smaller CSV or VADER.",
+                    "is-error");
                 return;
             }
 
-            latestBatchRows = cleanRows;
-            const summary = buildBatchSummary(cleanRows);
-            const target = document.getElementById('batchResult');
+            showStatus("batchResult", "Analyzing CSV...", "is-loading");
 
-            const summaryHtml = `
-                <div class="result-box mb-3">
-                    <div class="summary-grid">
-                        <article class="summary-card positive">
-                            <h3>${summary.counts.positive}</h3>
-                            <p>Positive</p>
-                            <small>${summary.positivePct}%</small>
-                        </article>
-                        <article class="summary-card negative">
-                            <h3>${summary.counts.negative}</h3>
-                            <p>Negative</p>
-                            <small>${summary.negativePct}%</small>
-                        </article>
-                        <article class="summary-card neutral">
-                            <h3>${summary.counts.neutral}</h3>
-                            <p>Neutral</p>
-                            <small>${summary.neutralPct}%</small>
-                        </article>
-                    </div>
+            const form = new FormData();
+            form.append("file", file);
+            form.append("model", model);
 
-                    <div class="stacked-bar mt-3" aria-hidden="true">
-                        <span class="positive" style="width:${summary.positivePct}%"></span>
-                        <span class="negative" style="width:${summary.negativePct}%"></span>
-                        <span class="neutral" style="width:${summary.neutralPct}%"></span>
-                    </div>
+            const res = await fetch("/batch_predict_ui", { method: "POST", body: form });
+            const data = await res.json();
 
-                    <p class="mt-3 mb-2"><strong>Total rows:</strong> ${summary.total}</p>
-                    <p class="mb-0"><strong>Average confidence:</strong> ${summary.avgConfidencePct}%</p>
-                </div>
-                <div class="chart-wrap mb-3">
-                    <canvas id="batchChartCanvas"></canvas>
-                </div>
-                <div class="mb-3 text-end">
-                    <button type="button" class="btn-secondary-action" onclick="downloadBatchCsv()">Download Results CSV</button>
-                </div>
-            `;
-
-            const rowsHtml = cleanRows.map((row, index) => {
-                return `
-                    <tr>
-                        <td class="text-muted">${index + 1}</td>
-                        <td>${escapeHtml(row.text)}</td>
-                        <td><span class="sentiment-pill ${sentimentClass(row.sentiment)}">${row.sentiment.toUpperCase()}</span></td>
-                        <td class="confidence-cell">${formatConfidence(row.confidence)}%</td>
-                    </tr>
-                `;
-            }).join('');
-
-            const tableHtml = `
-                <div class="result-table">
-                    <table class="table align-middle mb-0">
-                        <thead>
-                            <tr>
-                                <th style="width: 8%;">#</th>
-                                <th style="width: 52%;">Text</th>
-                                <th style="width: 20%;">Sentiment</th>
-                                <th style="width: 20%;">Confidence</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${rowsHtml}
-                        </tbody>
-                    </table>
-                </div>
-            `;
-
-            target.innerHTML = summaryHtml + tableHtml;
-            renderBatchChart(summary);
-        }
-
-        async function analyzeBatch(event) {
-            event.preventDefault();
-
-            const fileInput = document.getElementById('csvFile');
-            const model = document.getElementById('batchModel').value;
-            const file = fileInput.files[0];
-
-            if (!file) {
-                showStatus('batchResult', 'Please select a CSV file before analyzing.', 'is-error');
+            if (!res.ok || data.error) {
+                showStatus("batchResult", data.error || "Batch failed.", "is-error");
                 return;
             }
 
-            showStatus('batchResult', 'Analyzing CSV...', 'is-loading');
-
-            const formData = new FormData();
-            formData.append('file', file);
-            formData.append('model', model);
-
-            try {
-                const response = await fetch('/batch_predict_ui', {
-                    method: 'POST',
-                    body: formData
-                });
-
-                const payload = await response.json();
-                if (!response.ok || payload.error) {
-                    throw new Error(payload.error || 'Unable to analyze CSV right now.');
-                }
-
-                if (!Array.isArray(payload)) {
-                    throw new Error('Unexpected response format from batch API.');
-                }
-
-                renderBatchResults(payload);
-            } catch (error) {
-                showStatus('batchResult', error.message, 'is-error');
-            }
+            showStatus("batchResult", "CSV analyzed successfully ✔", "is-success");
         }
     </script>
 </body>
