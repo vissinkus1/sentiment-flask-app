@@ -7,6 +7,14 @@ import io
 from datetime import datetime
 
 
+import nltk
+
+# Ensure NLTK resources are available
+try:
+    nltk.data.find("tokenizers/punkt")
+except LookupError:
+    nltk.download("punkt")
+
 app = Flask(
     __name__,
     template_folder="templates",

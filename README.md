@@ -1,183 +1,143 @@
-# Sentiment Studio (Flask)
+# Sentiment Studio 🚀
 
-A Flask web application for sentiment analysis with three model options:
-- `bert` (Transformers pipeline, loaded lazily)
-- `vader` (rule-based)
-- `textblob` (polarity-based)
+A powerful sentiment analysis toolkit featuring a Flask web application and a standalone advanced analysis script. It leverages multiple models including **BERT** (Transformers), **VADER**, and **TextBlob** to provide accurate sentiment classification.
 
-The app supports single-text analysis, batch CSV analysis, and CSV result download.
+## 🌟 Features
 
-## Current Project Status
+### 🖥️ Web Application (`app.py`)
+- **Real-time Analysis**: precise sentiment scoring for single text inputs.
+- **Batch Processing**: Upload CSV files for bulk sentiment analysis.
+- **Multi-Model Support**:
+    - `BERT`: Deep learning model for high accuracy (DistilBERT).
+    - `VADER`: Rule-based model optimized for social media text.
+    - `TextBlob`: Simple polarity-based sentiment.
+- **Export Results**: Download analyzed data as CSV.
+- **Interactive UI**: Clean, responsive interface built with Bootstrap 5.
 
-- Backend and UI are integrated and working through Flask routes in `app.py`.
-- Batch and single analysis return normalized sentiment fields: `sentiment`, `confidence`, `label`, and `score`.
-- BERT loading is optional and fault-tolerant.
-- If BERT is disabled or unavailable, the app falls back to VADER for `bert` requests.
-- CI is configured in `.github/workflows/ci.yml` to run linting (`ruff`) and tests (`pytest`) with `DISABLE_BERT=1`.
+### 📊 Advanced Analysis Script (`sentiment_analysis_advanced_v2.py`)
+- **Standalone Tool**: Run sentiment analysis without starting the web server.
+- **Data Visualization**: Generates sentiment distribution plots and word clouds.
+- **Model Comparison**: Compare accuracy across TextBlob, VADER, and BERT.
+- **Auto-Report**: Saves detailed results to `sentiment_analysis_results.csv`.
 
-## Features
+---
 
-- Single text prediction from the UI (`/predict_ui`) and API (`/predict`)
-- Batch CSV prediction from the UI (`/batch_predict_ui`) and API (`/batch_predict`)
-- Downloadable analyzed CSV from API (`/batch_predict_download`)
-- Confidence scoring normalized to a `0.0` to `1.0` range
-- Responsive frontend in `templates/index.html`
+## 🛠️ Tech Stack
 
-## Tech Stack
+- **Language**: Python 3.11+
+- **Web Framework**: Flask
+- **ML/NLP Libraries**: Transformers (Hugging Face), PyTorch, VADER, TextBlob, Scikit-learn
+- **Data Handling**: Pandas, NumPy
+- **Visualization**: Matplotlib, Seaborn, WordCloud
 
-- Python 3.11+ recommended
-- Flask
-- Transformers + Torch
-- VADER Sentiment
-- TextBlob
-- Pandas
-- Chart.js (frontend visualization)
-- Bootstrap 5
+---
 
-## Installation
+## 🚀 Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone <your-repo-url>
+   cd sentiment_flask_app
+   ```
+
+2. **Create a virtual environment**
+   ```bash
+   python -m venv .venv
+   ```
+
+3. **Activate the environment**
+   - **Windows (PowerShell)**:
+     ```powershell
+     .\.venv\Scripts\Activate.ps1
+     ```
+   - **macOS/Linux**:
+     ```bash
+     source .venv/bin/activate
+     ```
+
+4. **Install dependencies**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+---
+
+## 💡 Usage
+
+### Running the Web App
+
+1. Start the Flask server:
+   ```bash
+   python app.py
+   ```
+2. Open your browser and navigate to:
+   ```
+   http://127.0.0.1:5000
+   ```
+
+### Running the Advanced Analysis Script
+
+Run the standalone script to analyze the sample dataset (`tweet_eval`) and generate reports:
 
 ```bash
-git clone <your-repo-url>
-cd sentiment_flask_app
-python -m venv .venv
+python sentiment_analysis_advanced_v2.py
 ```
 
-Activate virtual environment:
+This will:
+- Download necessary NLTK data.
+- Load a sample dataset.
+- Perform analysis using all three models.
+- Display accuracy metrics in the terminal.
+- Save the results to `sentiment_analysis_results.csv`.
 
-- Windows PowerShell
+---
 
-```powershell
-.\.venv\Scripts\Activate.ps1
-```
+## 📡 API Endpoints
 
-- macOS/Linux
+The Flask app provides a robust API for integration:
 
-```bash
-source .venv/bin/activate
-```
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/predict` | `POST` | Analyze a single text string. |
+| `/batch_predict` | `POST` | Upload a CSV for batch analysis. |
+| `/batch_predict_download`| `POST` | Upload CSV and download results immediately. |
 
-Install dependencies:
+### Example API Request (JSON)
 
-```bash
-pip install -r requirements.txt
-```
-
-## Run the App
-
-```bash
-python app.py
-```
-
-Default URL:
-
-- `http://127.0.0.1:5000`
-
-## Environment Variables
-
-- `PORT`: server port (default `5000`)
-- `BERT_MODEL_NAME`: Hugging Face model id (default `distilbert-base-uncased-finetuned-sst-2-english`)
-- `DISABLE_BERT`: disable BERT loading when set to `1`, `true`, or `yes`
-
-Example (PowerShell):
-
-```powershell
-$env:DISABLE_BERT='1'
-python app.py
-```
-
-## API Endpoints
-
-### 1) Single prediction
-
-- `POST /predict`
-- JSON input:
-
+**POST** `/predict`
 ```json
 {
-  "text": "I love this product",
-  "model": "vader"
+  "text": "The service was absolutely amazing!",
+  "model": "bert"
 }
 ```
 
-- JSON output:
-
+**Response**
 ```json
 {
-  "model": "vader",
+  "model": "bert",
   "sentiment": "positive",
-  "confidence": 0.8,
+  "confidence": 0.99,
   "label": "positive",
-  "score": 0.8
+  "score": 0.99
 }
 ```
 
-### 2) Batch prediction
+---
 
-- `POST /batch_predict`
-- `multipart/form-data` with:
-- `file`: CSV file containing a `text` column
-- `model`: one of `bert`, `vader`, `textblob`
-
-Returns a JSON array of analyzed rows.
-
-### 3) Batch prediction download
-
-- `POST /batch_predict_download`
-- Same input format as `/batch_predict`
-- Returns `text/csv` attachment with analyzed output columns
-
-### 4) UI-specific routes
-
-- `POST /predict_ui`
-- `POST /batch_predict_ui`
-
-These are used by the frontend and return UI-friendly prediction payloads.
-
-## CSV Input Format
-
-Your CSV must include a `text` column:
-
-```csv
-text
-I love this app
-This is average
-I hate the delay
-```
-
-## Project Structure
+## 📂 Project Structure
 
 ```text
 sentiment_flask_app/
-|-- app.py
-|-- README.md
-|-- requirements.txt
-|-- input.csv
-|-- templates/
-|   |-- index.html
-|   `-- static/
-|       `-- style.css
-|-- tests/
-|   `-- test_app.py
-|-- test_api.py
-`-- test_batch_api.py
+├── app.py                          # Main Flask application
+├── sentiment_analysis_advanced_v2.py # Standalone analysis script
+├── requirements.txt                # Python dependencies
+├── README.md                       # Project documentation
+├── templates/                      # HTML templates
+│   └── index.html
+└── static/                         # Static assets (CSS/JS)
 ```
 
-## Testing and Linting
-
-Run tests:
-
-```bash
-python -m pytest -q
-```
-
-Run lint checks:
-
-```bash
-ruff check .
-```
-
-## Notes
-
-- In constrained environments (CI or low-memory systems), set `DISABLE_BERT=1`.
-- `test_api.py` and `test_batch_api.py` are manual API client scripts that require the Flask app to be running.
-- Pytest coverage in `tests/test_app.py` includes validation for malformed CSV, missing file, and output schema.
+## 📝 functionality Notes
+- **BERT Model**: The app downloads `distilbert-base-uncased-finetuned-sst-2-english` on the first run. This may take a few moments.
+- **CSV Format**: For batch upload, ensure your CSV has a column named `text`.
