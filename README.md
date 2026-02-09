@@ -1,5 +1,7 @@
 # Sentiment Studio 🚀
 
+**[Live Demo](https://sentiment-flask-app-i1vg.onrender.com)** 🌐
+
 A powerful sentiment analysis toolkit featuring a Flask web application and a standalone advanced analysis script. It leverages multiple models including **BERT** (Transformers), **VADER**, and **TextBlob** to provide accurate sentiment classification.
 
 ## 🌟 Features
