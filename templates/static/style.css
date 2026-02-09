@@ -112,26 +112,44 @@ h6 {
 
 /* Inputs */
 .form-control,
-.form-select {
-    background: rgba(0, 0, 0, 0.3);
+.form-select,
+textarea.form-control {
+    background: rgba(0, 0, 0, 0.3) !important;
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-sm);
-    color: #ffffff;
+    color: #ffffff !important;
     padding: 0.8rem 1rem;
     font-size: 1rem;
     transition: all 0.2s ease;
+}
+
+/* Fix for auto-fill bg color */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill,
+textarea:-webkit-autofill:hover,
+textarea:-webkit-autofill:focus,
+select:-webkit-autofill,
+select:-webkit-autofill:hover,
+select:-webkit-autofill:focus {
+    -webkit-text-fill-color: #ffffff !important;
+    -webkit-box-shadow: 0 0 0px 1000px rgba(0, 0, 0, 0.3) inset !important;
+    transition: background-color 5000s ease-in-out 0s;
 }
 
 .form-control:focus,
 .form-select:focus {
     outline: none;
     border-color: var(--accent-primary);
-    background: rgba(0, 0, 0, 0.4);
+    background: rgba(0, 0, 0, 0.4) !important;
+    color: #ffffff !important;
     box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.1);
 }
 
 .form-control::placeholder {
-    color: var(--text-muted);
+    color: rgba(255, 255, 255, 0.5) !important;
+    opacity: 1;
 }
 
 textarea.form-control {
